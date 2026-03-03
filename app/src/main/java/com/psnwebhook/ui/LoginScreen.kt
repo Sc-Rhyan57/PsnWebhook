@@ -23,7 +23,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Games
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Login
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -34,10 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.psnwebhook.BuildConfig
 
 @Composable
 fun LoginScreen(onLoginClick: () -> Unit) {
@@ -48,11 +53,7 @@ fun LoginScreen(onLoginClick: () -> Unit) {
         label = "p"
     )
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(C.GradTop, C.GradMid, C.GradBot)))
-    ) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(C.GradTop, C.GradMid, C.GradBot)))) {
         Box(
             Modifier
                 .size(300.dp)
@@ -76,13 +77,13 @@ fun LoginScreen(onLoginClick: () -> Unit) {
                 Icon(Icons.Outlined.Games, null, tint = C.Cyan, modifier = Modifier.size(52.dp))
             }
 
-            Spacer(Modifier.height(28.dp))
-
+            Spacer(Modifier.height(20.dp))
             Text("PSN Webhook", fontWeight = FontWeight.ExtraBold, fontSize = 32.sp, color = C.White)
-            Spacer(Modifier.height(8.dp))
-            Text("Spoofe sua presença na PSN", fontSize = 14.sp, color = C.Muted)
+            Text("v${BuildConfig.VERSION_NAME}", fontSize = 10.sp, color = C.Muted.copy(0.5f))
+            Spacer(Modifier.height(6.dp))
+            Text("Spoof your PlayStation presence", fontSize = 14.sp, color = C.Muted)
 
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(36.dp))
 
             Column(
                 Modifier
@@ -92,13 +93,13 @@ fun LoginScreen(onLoginClick: () -> Unit) {
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                FeatureRow("🎮", "Mostre que está jogando qualquer game PSN")
-                FeatureRow("👤", "Veja seu perfil, nível e troféus")
-                FeatureRow("📋", "Gerencie jogos recentes")
-                FeatureRow("🔄", "Presença automática em segundo plano")
+                FeatureRow(Icons.Outlined.Games,       "Show any PSN game as your current activity")
+                FeatureRow(Icons.Outlined.Info,        "View your profile, level and trophies")
+                FeatureRow(Icons.Outlined.Security,    "Auto-refresh presence in background")
+                FeatureRow(Icons.Outlined.VisibilityOff, "Data stays local — never shared")
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(28.dp))
 
             Button(
                 onClick = onLoginClick,
@@ -108,24 +109,22 @@ fun LoginScreen(onLoginClick: () -> Unit) {
             ) {
                 Icon(Icons.Outlined.Login, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
-                Text("Entrar com PlayStation", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                Text("Sign in with PlayStation", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(14.dp))
             Text(
-                "Faça login com sua conta Sony para continuar",
-                fontSize = 11.sp,
-                color = C.Muted,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                "Sign in with your Sony account to continue",
+                fontSize = 11.sp, color = C.Muted, textAlign = TextAlign.Center
             )
         }
     }
 }
 
 @Composable
-private fun FeatureRow(emoji: String, text: String) {
+private fun FeatureRow(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(emoji, fontSize = 18.sp)
+        Icon(icon, null, tint = C.Accent, modifier = Modifier.size(18.dp))
         Text(text, fontSize = 13.sp, color = C.White.copy(0.85f))
     }
 }
