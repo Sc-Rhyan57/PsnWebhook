@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PsnWebhook" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#FF00041A</item>
+        <item name="android:statusBarColor">#FF00041A</item>
+        <item name="android:navigationBarColor">#FF00041A</item>
+    </style>
+</resources>
