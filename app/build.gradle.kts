@@ -12,16 +12,19 @@ android {
         applicationId = "com.psnwebhook"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = (System.getenv("BUILD_NUMBER") ?: "1").toIntOrNull() ?: 1
+        versionName = "1.0.${System.getenv("BUILD_NUMBER") ?: "0"}"
+
+        buildConfigField("String", "GITHUB_REPO", "\"Sc-Rhyan57/PsnWebhook\"")
+        buildConfigField("String", "GITHUB_API_LATEST", "\"https://api.github.com/repos/Sc-Rhyan57/PsnWebhook/releases/latest\"")
     }
 
     signingConfigs {
         create("release") {
             storeFile = file("keystore.jks")
             storePassword = System.getenv("KEY_PASSWORD") ?: ""
-            keyAlias = System.getenv("KEY_ALIAS") ?: ""
-            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+            keyAlias     = System.getenv("KEY_ALIAS")    ?: ""
+            keyPassword  = System.getenv("KEY_PASSWORD") ?: ""
         }
     }
 
@@ -41,26 +44,20 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    kotlinOptions { jvmTarget = "17" }
 
     buildFeatures {
-        compose = true
+        compose     = true
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
-    }
+    composeOptions { kotlinCompilerExtensionVersion = "1.5.11" }
 
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "META-INF/INDEX.LIST"
             excludes += "META-INF/DEPENDENCIES"
-            excludes += "META-INF/LICENSE"
-            excludes += "META-INF/NOTICE"
         }
     }
 }
