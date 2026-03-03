@@ -13,9 +13,11 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
-import android.widget.ViewSwitcher
 import androidx.activity.ComponentActivity
-import kotlin.concurrent.thread
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class PsnLoginActivity : ComponentActivity() {
 
@@ -27,20 +29,19 @@ class PsnLoginActivity : ComponentActivity() {
 
     private var webView: WebView? = null
     private val handler = Handler(Looper.getMainLooper())
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var alreadyProcessed = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         CookieManager.getInstance().removeAllCookies(null)
-
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.userAgentString = "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"
             webViewClient = PsnWebViewClient()
         }
-
         val frame = FrameLayout(this).apply {
             addView(webView, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -48,19 +49,12 @@ class PsnLoginActivity : ComponentActivity() {
             ))
         }
         setContentView(frame)
-
         webView?.loadUrl(PSN_LOGIN_URL)
     }
 
     private fun showLoading(msg: String) {
         handler.post {
-            val html = """
-                <html><body style='background:#00041A;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0'>
-                <div style='text-align:center'>
-                  <div style='font-size:36px;margin-bottom:16px'>🎮</div>
-                  <div style='font-size:16px;color:#00439C'>$msg</div>
-                </div></body></html>
-            """.trimIndent()
+            val html = "<html><body style='background:#00041A;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0'><div style='text-align:center'><div style='font-size:36px;margin-bottom:16px'>🎮</div><div style='font-size:16px;color:#00439C'>$msg</div></div></body></html>"
             val encoded = Base64.encodeToString(html.toByteArray(), Base64.DEFAULT)
             webView?.loadData(encoded, "text/html; charset=UTF-8", "base64")
         }
@@ -78,11 +72,13 @@ class PsnLoginActivity : ComponentActivity() {
         }
 
         private fun checkForNpsso(url: String) {
+            if (alreadyProcessed) return
             if (url.contains("my.playstation.com") || url.contains("playstation.com/en-") || url.contains("sonyentertainmentnetwork.com")) {
-                thread {
+                scope.launch {
                     try {
                         val npsso = fetchNpsso()
                         if (npsso.isNotEmpty()) {
+                            alreadyProcessed = true
                             showLoading("Autenticando...")
                             processNpsso(npsso)
                         }
@@ -94,9 +90,7 @@ class PsnLoginActivity : ComponentActivity() {
 
     private fun fetchNpsso(): String {
         return try {
-            val client = okhttp3.OkHttpClient.Builder()
-                .followRedirects(false)
-                .build()
+            val client = okhttp3.OkHttpClient.Builder().followRedirects(false).build()
             val cookies = CookieManager.getInstance().getCookie("https://ca.account.sony.com") ?: ""
             val req = okhttp3.Request.Builder()
                 .url(NPSSO_CHECK_URL)
@@ -106,32 +100,28 @@ class PsnLoginActivity : ComponentActivity() {
                 .build()
             val resp = client.newCall(req).execute()
             val body = resp.body?.string() ?: return ""
-            if (body.contains("npsso")) {
-                org.json.JSONObject(body).optString("npsso", "")
-            } else ""
+            if (body.contains("npsso")) org.json.JSONObject(body).optString("npsso", "") else ""
         } catch (_: Exception) { "" }
     }
 
-    private fun processNpsso(npsso: String) {
-        thread {
-            try {
-                val (accessToken, refreshToken, expiresAt) = PsnAuthManager.exchangeNpssoForTokens(npsso)
-                handler.post {
-                    val result = Intent().apply {
-                        putExtra("npsso", npsso)
-                        putExtra("accessToken", accessToken)
-                        putExtra("refreshToken", refreshToken)
-                        putExtra("expiresAt", expiresAt)
-                    }
-                    setResult(Activity.RESULT_OK, result)
-                    finish()
+    private suspend fun processNpsso(npsso: String) {
+        try {
+            val (accessToken, refreshToken, expiresAt) = PsnAuthManager.exchangeNpssoForTokens(npsso)
+            handler.post {
+                val result = Intent().apply {
+                    putExtra("npsso", npsso)
+                    putExtra("accessToken", accessToken)
+                    putExtra("refreshToken", refreshToken)
+                    putExtra("expiresAt", expiresAt)
                 }
-            } catch (e: Exception) {
-                handler.post {
-                    val html = "<html><body style='background:#00041A;color:#EF4444;font-family:monospace;padding:20px'><h3>Erro de autenticação</h3><pre>${e.message}</pre><p>Tente novamente.</p></body></html>"
-                    val encoded = Base64.encodeToString(html.toByteArray(), Base64.DEFAULT)
-                    webView?.loadData(encoded, "text/html; charset=UTF-8", "base64")
-                }
+                setResult(Activity.RESULT_OK, result)
+                finish()
+            }
+        } catch (e: Exception) {
+            handler.post {
+                val html = "<html><body style='background:#00041A;color:#EF4444;font-family:monospace;padding:20px'><h3>Erro</h3><pre>${e.message}</pre></body></html>"
+                val encoded = Base64.encodeToString(html.toByteArray(), Base64.DEFAULT)
+                webView?.loadData(encoded, "text/html; charset=UTF-8", "base64")
             }
         }
     }
