@@ -4,8 +4,10 @@ import com.psnwebhook.model.PsnAccount
 import com.psnwebhook.model.PsnGame
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -15,6 +17,8 @@ object PsnApiClient {
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
+
+    private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
     suspend fun fetchProfile(accessToken: String): PsnAccount = withContext(Dispatchers.IO) {
         val resp = http.newCall(
@@ -80,7 +84,6 @@ object PsnApiClient {
                 val t = titles.getJSONObject(i)
                 val titleId = t.optString("titleId", "")
                 if (titleId.isEmpty()) continue
-
                 val name = t.optString("name", titleId)
                 val imageUrlObj = t.optJSONObject("imageUrl") ?: t.optJSONObject("image")
                 val imageUrl = imageUrlObj?.optString("url", "") ?: t.optString("imageUrl", "")
@@ -100,10 +103,7 @@ object PsnApiClient {
     suspend fun setPresence(accessToken: String, titleId: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val payload = """{"titleId":"$titleId","titleType":""}"""
-            val body = okhttp3.RequestBody.create(
-                okhttp3.MediaType.parse("application/json; charset=utf-8"),
-                payload
-            )
+            val body = payload.toRequestBody(JSON_MEDIA)
             val resp = http.newCall(
                 Request.Builder()
                     .url("https://m.np.playstation.com/api/sessionManager/v1/remotePlay/sessionEvent")
