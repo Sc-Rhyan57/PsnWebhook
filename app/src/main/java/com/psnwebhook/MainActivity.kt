@@ -75,9 +75,8 @@ import com.psnwebhook.model.AppScreen
 import com.psnwebhook.ui.C
 import com.psnwebhook.ui.HomeScreen
 import com.psnwebhook.ui.LoginScreen
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -85,9 +84,7 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.concurrent.TimeUnit
 
-private const val PREF_CRASH      = "psn_crash_prefs"
-private const val KEY_CRASH_TRACE = "crash_trace"
-private const val CURRENT_VERSION get() = BuildConfig.VERSION_NAME
+private val CURRENT_VERSION: String get() = BuildConfig.VERSION_NAME
 
 private fun isNewerVersion(latest: String, current: String): Boolean {
     val l = latest.trimStart('v').split(".").mapNotNull { it.toIntOrNull() }
@@ -101,7 +98,7 @@ private fun isNewerVersion(latest: String, current: String): Boolean {
     return false
 }
 
-private suspend fun checkLatestVersion(): String? = kotlinx.coroutines.withContext(Dispatchers.IO) {
+private suspend fun checkLatestVersion(): String? = withContext(Dispatchers.IO) {
     try {
         val client = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).build()
         val resp = client.newCall(
@@ -149,7 +146,7 @@ class MainActivity : ComponentActivity() {
 
                     if (updateTag != null) {
                         UpdateDialog(
-                            tag = updateTag!!,
+                            tag     = updateTag!!,
                             current = CURRENT_VERSION,
                             onUpdate = {
                                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/${BuildConfig.GITHUB_REPO}/releases/latest")))
@@ -160,7 +157,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     PsnApp(
-                        vm = vm,
+                        vm           = vm,
                         onLaunchLogin = { loginLauncher.launch(PsnLoginActivity.intent(this)) }
                     )
                 }
@@ -176,10 +173,10 @@ class MainActivity : ComponentActivity() {
                 exception.printStackTrace(PrintWriter(sw))
                 val log = buildString {
                     appendLine("PSN Webhook — Crash Report")
-                    appendLine("Version   : $CURRENT_VERSION")
-                    appendLine("Device    : ${Build.MANUFACTURER} ${Build.MODEL}")
-                    appendLine("Android   : ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-                    appendLine("Thread    : ${thread.name}")
+                    appendLine("Version : $CURRENT_VERSION")
+                    appendLine("Device  : ${Build.MANUFACTURER} ${Build.MODEL}")
+                    appendLine("Android : ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+                    appendLine("Thread  : ${thread.name}")
                     appendLine("---")
                     append(sw.toString())
                 }
@@ -200,14 +197,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    companion object {
+        const val PREF_CRASH      = "psn_crash_prefs"
+        const val KEY_CRASH_TRACE = "crash_trace"
+    }
+
     @Composable
     fun CrashScreen(trace: String) {
         val ctx = LocalContext.current
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -227,7 +225,7 @@ class MainActivity : ComponentActivity() {
             }
 
             Text(
-                "An unexpected error occurred. Copy the log below and report it on GitHub.",
+                "An unexpected error occurred. Copy the log and report it on GitHub.",
                 fontSize = 13.sp, color = C.Muted, modifier = Modifier.padding(bottom = 12.dp)
             )
 
@@ -236,7 +234,7 @@ class MainActivity : ComponentActivity() {
                     (ctx.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager)
                         .setPrimaryClip(ClipData.newPlainText("Crash Log", trace))
                 },
-                modifier = Modifier.fillMaxWidth().height(46.dp).padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().height(46.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = C.Primary),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -244,6 +242,8 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.width(8.dp))
                 Text("Copy Crash Log", fontWeight = FontWeight.Bold)
             }
+
+            Spacer(Modifier.height(10.dp))
 
             Card(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -264,12 +264,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
             Button(
                 onClick = {
-                    ctx.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/${BuildConfig.GITHUB_REPO}/issues/new"))
-                    )
+                    ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/${BuildConfig.GITHUB_REPO}/issues/new")))
                 },
                 modifier = Modifier.fillMaxWidth().height(46.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = C.CardAlt),
@@ -362,18 +360,18 @@ fun PsnApp(vm: MainViewModel, onLaunchLogin: () -> Unit) {
                 AppScreen.HOME  -> {
                     if (account != null) {
                         HomeScreen(
-                            account           = account!!,
-                            games             = games,
-                            presence          = presence,
-                            trophies          = trophies,
-                            isLoading         = isLoading,
-                            customTitleId     = customTitleId,
+                            account             = account!!,
+                            games               = games,
+                            presence            = presence,
+                            trophies            = trophies,
+                            isLoading           = isLoading,
+                            customTitleId       = customTitleId,
+                            currentVersion      = CURRENT_VERSION,
                             onCustomTitleChange = vm::setCustomTitleId,
-                            onStartPresence   = vm::startPresence,
-                            onStopPresence    = vm::stopPresence,
-                            onRefresh         = vm::refreshData,
-                            onLogout          = vm::logout,
-                            currentVersion    = CURRENT_VERSION
+                            onStartPresence     = vm::startPresence,
+                            onStopPresence      = vm::stopPresence,
+                            onRefresh           = vm::refreshData,
+                            onLogout            = vm::logout
                         )
                     }
                 }
@@ -390,8 +388,12 @@ fun PsnApp(vm: MainViewModel, onLaunchLogin: () -> Unit) {
 @Composable
 fun Footer() {
     val t   = rememberInfiniteTransition(label = "rgb")
-    val hue by t.animateFloat(0f, 360f, infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "h")
-    val c   = Color.hsv(hue, 0.75f, 1f)
+    val hue by t.animateFloat(
+        0f, 360f,
+        infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart),
+        label = "h"
+    )
+    val c = Color.hsv(hue, 0.75f, 1f)
     Column(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.AutoAwesome, null, tint = c, modifier = Modifier.size(13.dp))
